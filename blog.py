@@ -1,13 +1,20 @@
 import os
 from flask_script import Manager
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from flask_bootstrap import Bootstrap
 from flask_sqlalchemy import SQLAlchemy
+from flask_basicauth import BasicAuth
+from wtforms import Form, StringField, TextAreaField, SelectMultipleField, validators
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 app = Flask(__name__)
+app.secret_key = 'A0Zr98j/3yX R~XHH!jmN]LWX/,?RT'
 manager = Manager(app)
 bootstrap = Bootstrap(app)
+
+app.config['BASIC_AUTH_USERNAME'] = 'admin'
+app.config['BASIC_AUTH_PASSWORD'] = 'admin'
+basic_auth = BasicAuth(app)
 
 app.config['SQLALCHEMY_DATABASE_URI'] =\
 'sqlite:///' + os.path.join(basedir, 'data.sqlite')
@@ -44,9 +51,28 @@ class Tag(db.Model):
         return "Tag %s" % self.name
 
 
+class InForm(Form):
+    title = StringField("Title", [validators.DataRequired("Please Enter your birthdate")])
+    content = TextAreaField("Content", [validators.DataRequired("Please Enter your birthdate")])
+    tags = SelectMultipleField("Tags", choices=[])
+
+
 @app.route('/')
 def index():
     return render_template('index.html')
+
+
+@app.route('/secret', methods=('GET', 'POST'))
+@basic_auth.required
+def secret():
+    form = InForm()
+    form.tags.choices =[(t, t) for t in Tag.query.all()]
+
+    # import ipdb
+    # ipdb.set_trace()
+    return render_template('admin.html', form=form)
+
+
 
 if __name__ == '__main__':
     manager.run()
