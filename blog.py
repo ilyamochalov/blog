@@ -51,7 +51,7 @@ class Tag(db.Model):
         return "Tag %s" % self.name
 
 
-class InForm(Form):
+class AdminForm(Form):
     title = StringField("Title", [validators.DataRequired("Please Enter your birthdate")])
     content = TextAreaField("Content", [validators.DataRequired("Please Enter your birthdate")])
     tags = SelectMultipleField("Tags", choices=[])
@@ -62,10 +62,17 @@ def index():
     return render_template('index.html')
 
 
-@app.route('/secret', methods=('GET', 'POST'))
+@app.route('/secret', methods=('GET',))
 @basic_auth.required
-def secret():
-    form = InForm()
+def admin_main():
+    e = Entry.query.all()
+    return render_template('admin_main.html', entries=e)
+
+
+@app.route('/secret/add', methods=('GET', 'POST'))
+@basic_auth.required
+def add_new_article():
+    form = AdminForm()
     form.tags.choices =[(t, t) for t in Tag.query.all()]
 
     # import ipdb
@@ -73,6 +80,12 @@ def secret():
     return render_template('admin.html', form=form)
 
 
+@app.route('/secret/<slug>', methods=('GET', 'POST'))
+@basic_auth.required
+def edit_article(slug):
+    return slug
+
 
 if __name__ == '__main__':
     manager.run()
+
