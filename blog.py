@@ -1,10 +1,13 @@
 import os
 from flask_script import Manager
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect
 from flask_bootstrap import Bootstrap
 from flask_sqlalchemy import SQLAlchemy
 from flask_basicauth import BasicAuth
 from wtforms import Form, StringField, TextAreaField, SelectMultipleField, validators
+from slugify import slugify
+from datetime import datetime
+
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 app = Flask(__name__)
@@ -36,8 +39,19 @@ class Entry(db.Model):
     content = db.Column(db.Text, unique=True)
     timestamp = db.Column(db.DateTime)
     tags = db.relationship('Tag', secondary=entriestags,
-        backref=db.backref('entries', lazy='dynamic'))
+    backref=db.backref('entries', lazy='dynamic'))
 
+    def __init__(self, *args, **kwargs):
+        if not 'slug' in kwargs:
+            kwargs['slug'] = slugify(
+                kwargs.get('title'),
+                separator='_')
+        
+        if not 'timestamp' in kwargs:
+            kwargs['timestamp'] = datetime.utcnow()    
+        
+        super(Entry, self).__init__(*args, **kwargs)
+        
     def __repr__(self):
         return "Entry %s" % self.title
 
@@ -72,6 +86,16 @@ def admin_main():
 @app.route('/secret/add', methods=('GET', 'POST'))
 @basic_auth.required
 def add_new_article():
+    if required.method == 'POST':
+        title = request.form['title']
+        content = request.form['content']
+        tags = request.form['tags']
+
+        new_article = Entry(
+            title=title,
+            content=content,
+            tags=tags,
+        )
     form = AdminForm()
     form.tags.choices =[(t, t) for t in Tag.query.all()]
 
