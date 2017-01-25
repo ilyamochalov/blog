@@ -1,6 +1,6 @@
 import os
 from flask_script import Manager
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, url_for
 from flask_bootstrap import Bootstrap
 from flask_sqlalchemy import SQLAlchemy
 from flask_basicauth import BasicAuth
@@ -62,7 +62,7 @@ class Tag(db.Model):
     name = db.Column(db.String(30))
 
     def __repr__(self):
-        return "Tag %s" % self.name
+        return "%s" % self.name
 
 
 class AdminForm(Form):
@@ -86,22 +86,22 @@ def admin_main():
 @app.route('/secret/add', methods=('GET', 'POST'))
 @basic_auth.required
 def add_new_article():
-    if required.method == 'POST':
-        title = request.form['title']
-        content = request.form['content']
-        tags = request.form['tags']
-
-        new_article = Entry(
-            title=title,
-            content=content,
-            tags=tags,
-        )
-    form = AdminForm()
-    form.tags.choices =[(t, t) for t in Tag.query.all()]
-
-    # import ipdb
-    # ipdb.set_trace()
-    return render_template('admin.html', form=form)
+    if request.method == 'POST':
+        tags = []
+        for tag in request.form.getlist('tags'):
+            tag_object = Tag.query.filter_by(name=tag).first()
+            tags.append(tag_object)
+        
+        new_article = Entry(title = request.form['title'],
+                            content = request.form['content'],
+                            tags = tags)
+        db.session.add(new_article)
+        db.session.commit()
+        return redirect(url_for('admin_main'))
+    else:
+        form = AdminForm()
+        form.tags.choices =[(t, t) for t in Tag.query.all()]
+        return render_template('admin.html', form=form)
 
 
 @app.route('/secret/<slug>', methods=('GET', 'POST'))
