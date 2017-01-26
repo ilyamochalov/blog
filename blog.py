@@ -65,11 +65,15 @@ class Tag(db.Model):
         return "%s" % self.name
 
 
-class AdminForm(Form):
-    title = StringField("Title", [validators.DataRequired("Please Enter your birthdate")])
-    content = TextAreaField("Content", [validators.DataRequired("Please Enter your birthdate")])
+class ArticleForm(Form):
+    title = StringField("Title", [validators.DataRequired("Please enter title")])
+    content = TextAreaField("Content", [validators.DataRequired("Please Enter content")])
     tags = SelectMultipleField("Tags", choices=[])
 
+
+class TagForm(Form):
+    name = StringField("Tag name", [validators.DataRequired("Please enter tag's name")])
+    
 
 @app.route('/')
 def index():
@@ -83,7 +87,7 @@ def admin_main():
     return render_template('admin_main.html', entries=e)
 
 
-@app.route('/secret/add', methods=('GET', 'POST'))
+@app.route('/secret/add_post', methods=('GET', 'POST'))
 @basic_auth.required
 def add_new_article():
     if request.method == 'POST':
@@ -92,17 +96,29 @@ def add_new_article():
             tag_object = Tag.query.filter_by(name=tag).first()
             tags.append(tag_object)
         
-        new_article = Entry(title = request.form['title'],
-                            content = request.form['content'],
-                            tags = tags)
+        new_article = Entry(title=request.form['title'],
+                            content=request.form['content'],
+                            tags=tags)
         db.session.add(new_article)
         db.session.commit()
         return redirect(url_for('admin_main'))
     else:
-        form = AdminForm()
+        form = ArticleForm()
         form.tags.choices =[(t, t) for t in Tag.query.all()]
-        return render_template('admin.html', form=form)
+        return render_template('add_post.html', form=form)
 
+
+@app.route('/secret/add_tag', methods=('GET','POST'))
+@basic_auth.required
+def add_new_tag():
+    if request.method == 'POST':
+        new_tag = Tag(name=request.form['name'])
+        db.session.add(new_tag)
+        db.session.commit()
+        return redirect(url_for('admin_main'))
+    else:
+        form = TagForm()
+        return render_template('add_tag.html', form=form)
 
 @app.route('/secret/<slug>', methods=('GET', 'POST'))
 @basic_auth.required
